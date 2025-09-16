@@ -1,27 +1,36 @@
 package com.prabhath.ragdemo.service;
 
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.document.Document;
-import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
-public class ChatService {
-    private static final Logger logger = LoggerFactory.getLogger(ChatService.class);
+public class RAGService {
+    private static final Logger logger = LoggerFactory.getLogger(RAGService.class);
     
     private final ChatModel chatModel;
     private final org.springframework.ai.vectorstore.VectorStore vectorStore;
 
-    public ChatService( ChatModel chatModel,
+
+    public RAGService(ChatModel chatModel,
                       org.springframework.ai.vectorstore.VectorStore vectorStore) {
         this.chatModel = chatModel;
         this.vectorStore = vectorStore;
+
     }
 
-    public String chat(String message) {
+    @Tool(name = "employee_data",
+            description = "Answer about an employee personal information using retrieved document chunks (RAG). Input: user question string.")
+    public String doRag(String message) {
+        logger.info("Running RAG for question: {}", message);
         // Retrieve relevant chunks from vector store
         List<Document> relevantChunks = vectorStore.similaritySearch(message);
         if (relevantChunks == null || relevantChunks.isEmpty()) {
@@ -69,9 +78,12 @@ public class ChatService {
                             "Context:\n" + context + "\n" +
                             "---\n" +
                             "Question: " + message + "\n";
-        
-        logger.info("Sending prompt to chat model:\n{}", systemPrompt);
+
+        logger.info("Sending prompt to chat model: {} ", systemPrompt);
         String response = chatModel.call(systemPrompt);
+        logger.info("Response: {}", response);
         return response;
     }
+
+
 }

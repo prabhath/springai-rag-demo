@@ -1,17 +1,20 @@
 package com.prabhath.ragdemo.service;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class PDFIngestor {
@@ -72,7 +75,7 @@ public class PDFIngestor {
     }
     
     /**
-     * Splits text into chunks of specified size, trying to break at sentence boundaries.
+     * Splits text into chunks of specified size, trying to break at sentence boundaries and ensuring no chunk exceeds the safe size.
      * @param text The text to split
      * @param chunkSize The target size of each chunk (in characters)
      * @return List of text chunks
@@ -82,37 +85,42 @@ public class PDFIngestor {
         if (text == null || text.isEmpty()) {
             return chunks;
         }
-        
+        // Use a safer chunk size (tokens are less than characters)
+        int safeChunkSize = Math.min(chunkSize, 200);
         // First, split by paragraphs (double newlines)
         String[] paragraphs = text.split("\\n\\s*\\n");
-        
-        StringBuilder currentChunk = new StringBuilder();
         for (String paragraph : paragraphs) {
-            // If adding this paragraph would exceed chunk size, finalize current chunk
-            if (currentChunk.length() > 0 && 
-                currentChunk.length() + paragraph.length() > chunkSize) {
-                chunks.add(currentChunk.toString().trim());
-                currentChunk = new StringBuilder();
-            }
-            
-            // Add paragraph to current chunk
-            if (currentChunk.length() > 0) {
-                currentChunk.append("\n\n");
-            }
-            currentChunk.append(paragraph);
-            
-            // If current chunk is large enough, finalize it
-            if (currentChunk.length() >= chunkSize) {
-                chunks.add(currentChunk.toString().trim());
-                currentChunk = new StringBuilder();
+            if (paragraph.length() <= safeChunkSize) {
+                chunks.add(paragraph.trim());
+            } else {
+                // Split by sentences if paragraph is too long
+                String[] sentences = paragraph.split("(?<=[.!?])\\s+");
+                StringBuilder currentChunk = new StringBuilder();
+                for (String sentence : sentences) {
+                    if (sentence.length() > safeChunkSize) {
+                        // Split long sentence into smaller parts
+                        for (int i = 0; i < sentence.length(); i += safeChunkSize) {
+                            int end = Math.min(i + safeChunkSize, sentence.length());
+                            chunks.add(sentence.substring(i, end).trim());
+                        }
+                        continue;
+                    }
+                    if (currentChunk.length() > 0 && currentChunk.length() + sentence.length() > safeChunkSize) {
+                        chunks.add(currentChunk.toString().trim());
+                        currentChunk = new StringBuilder();
+                    }
+                    if (currentChunk.length() > 0) {
+                        currentChunk.append(" ");
+                    }
+                    currentChunk.append(sentence);
+                }
+                if (currentChunk.length() > 0) {
+                    chunks.add(currentChunk.toString().trim());
+                }
             }
         }
-        
-        // Add any remaining text as the last chunk
-        if (currentChunk.length() > 0) {
-            chunks.add(currentChunk.toString().trim());
-        }
-        
+        // Remove empty chunks
+        chunks.removeIf(String::isEmpty);
         return chunks;
     }
 }
