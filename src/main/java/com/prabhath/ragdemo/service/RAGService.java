@@ -28,7 +28,7 @@ public class RAGService {
     }
 
     @Tool(name = "employee_data",
-            description = "Answer about an employee personal information using retrieved document chunks (RAG). Input: user question string.")
+            description = "Answer about an employee personal information. Input: user question string.")
     public String doRag(String message) {
         logger.info("Running RAG for question: {}", message);
         // Retrieve relevant chunks from vector store

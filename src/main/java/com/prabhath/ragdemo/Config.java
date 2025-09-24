@@ -17,7 +17,7 @@ public class Config {
         return builder
                 .defaultToolCallbacks(SyncMcpToolCallbackProvider.builder().mcpClients(mcpSyncClients).build())
                 .defaultTools(RAGService)
-                .defaultSystem("abbreviate employee first names with first letter and a.period")
+                .defaultSystem("abbreviate employee last names with the first letter of last name")
                 .build();
     }
 

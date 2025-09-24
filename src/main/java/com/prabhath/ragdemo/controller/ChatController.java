@@ -1,5 +1,6 @@
 package com.prabhath.ragdemo.controller;
 
+import com.prabhath.ragdemo.dto.SampleDTO;
 import com.prabhath.ragdemo.service.RAGService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,13 +24,33 @@ public class ChatController {
     }
 
     @GetMapping("/chat_with_hr_agent")
-    String inquire(@RequestParam("message") String message) {
+    public String inquire(@RequestParam("message") String message) {
         return chatClient
                 .prompt()
                 .user(message)
                 .call()
                 .content();
     }
+
+    @GetMapping("/chat")
+    public SampleDTO genericChat(@RequestParam("message") String message) {
+        SampleDTO sampleDTO = chatClient
+                .prompt()
+                .user(message)
+                .call()
+                .entity(SampleDTO.class);
+        return sampleDTO;
+    }
+
+    @GetMapping("/chat_simple")
+    public String genericChatSimple(@RequestParam("message") String message) {
+        return chatClient
+                .prompt()
+                .user(message)
+                .call()
+                .content();
+    }
+
 
 
 }
